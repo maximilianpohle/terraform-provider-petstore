@@ -5,8 +5,10 @@ package provider
 
 import (
 	"context"
-	"net/http"
 
+	"os"
+
+	"github.com/deepmap/oapi-codegen/examples/petstore-expanded"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -16,40 +18,40 @@ import (
 	// TODO: add an import to use the petstore client.
 )
 
-// Ensure ScaffoldingProvider satisfies various provider interfaces.
-var _ provider.Provider = &ScaffoldingProvider{}
+// Ensure PetstoreProvider satisfies various provider interfaces.
+var _ provider.Provider = &PetstoreProvider{}
 
-// ScaffoldingProvider defines the provider implementation.
-type ScaffoldingProvider struct {
+// PetstoreProvider defines the provider implementation.
+type PetstoreProvider struct {
 	// version is set to the provider version on release, "dev" when the
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
 }
 
-// ScaffoldingProviderModel describes the provider data model.
-type ScaffoldingProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
+// PetstoreProviderModel describes the provider data model.
+type PetstoreProviderModel struct {
+	Server types.String `tfsdk:"server"`
 }
 
-func (p *ScaffoldingProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "scaffolding"
+func (p *PetstoreProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "petstore"
 	resp.Version = p.version
 }
 
-func (p *ScaffoldingProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *PetstoreProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Example provider attribute",
+			"server": schema.StringAttribute{
+				MarkdownDescription: "the pestore server",
 				Optional:            true,
 			},
 		},
 	}
 }
 
-func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data ScaffoldingProviderModel
+func (p *PetstoreProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	var data PetstoreProviderModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
@@ -60,12 +62,12 @@ func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.Config
 	// Configuration values are now available.
 	// If practitioner provided a configuration value for any of the
 	// attributes, it must be a known value.
-	if data.Endpoint.IsUnknown() {
+	if data.Server.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("endpoint"),
+			path.Root("server"),
 			"Unknown Example API Host",
 			"The provider cannot create the Example API client as there is an unknown configuration value for the Example API host. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the EXAMPLE_ENDPOINT environment variable.",
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the PETSTORE_SERVER environment variable.",
 		)
 	}
 
@@ -77,20 +79,21 @@ func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.Config
 	// with Terraform configuration value if set.
 
 	// TODO: get server from env var `PETSTORE_SERVER`
+	server := os.Getenv("PETSTORE_SERVER")
 
-	var endpoint string
-	if !data.Endpoint.IsNull() {
-		endpoint = data.Endpoint.ValueString()
+	// var server string
+	if !data.Server.IsNull() {
+		server = data.Server.ValueString()
 	}
 
 	// If any of the expected configurations are missing, return
 	// errors with provider-specific guidance.
-	if endpoint == "" {
+	if server == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("server"),
 			"Unknown Example API Host",
 			"The provider cannot create the Example API client as there is an unknown configuration value for the Example API host. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the EXAMPLE_ENDPOINT environment variable.",
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the PETSTORE_SERVER environment variable.",
 		)
 	}
 
@@ -99,8 +102,8 @@ func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.Config
 	}
 
 	// TODO: Create a new petstore client using the configuration values
-	client := http.DefaultClient
-	var err error
+	client, err := petstore.NewClientWithResponses(server)
+	// var err error
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create Example API Client",
@@ -115,13 +118,13 @@ func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.Config
 	resp.ResourceData = client
 }
 
-func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.Resource {
+func (p *PetstoreProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewExampleResource,
 	}
 }
 
-func (p *ScaffoldingProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+func (p *PetstoreProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewExampleDataSource,
 	}
@@ -129,7 +132,7 @@ func (p *ScaffoldingProvider) DataSources(ctx context.Context) []func() datasour
 
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &ScaffoldingProvider{
+		return &PetstoreProvider{
 			version: version,
 		}
 	}

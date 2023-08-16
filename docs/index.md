@@ -23,4 +23,4 @@ provider "scaffolding" {
 
 ### Optional
 
-- `endpoint` (String) Example provider attribute
+- `server` (String) the pestore server
